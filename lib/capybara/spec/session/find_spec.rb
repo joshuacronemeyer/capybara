@@ -19,9 +19,7 @@ shared_examples_for "find" do
     end
 
     it "should raise an error if there are multiple matches" do
-      running do
-        @session.find('//a')
-      end.should raise_error(Capybara::ElementNotFound, "Multiple matches not allowed.")
+      expect { @session.find('//a') }.to raise_error(Capybara::ElementNotFound)
     end
 
     describe 'the returned node' do

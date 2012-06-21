@@ -57,10 +57,8 @@ module Capybara
     end
 
     def verify!(results)
-      if find and results.length < 1
+      if find and results.length != 1
         raise Capybara::ElementNotFound, failure_message
-      elsif find and results.length > 1
-        raise Capybara::ElementNotFound, "Multiple matches not allowed."
       end
     end
 

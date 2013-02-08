@@ -1,10 +1,23 @@
 require 'spec_helper'
 require 'capybara/dsl'
 
+class TestClass
+  include Capybara::DSL
+end
+
+Capybara::SpecHelper.run_specs TestClass.new, "DSL", :skip => [
+  :js,
+  :screenshot,
+  :frames,
+  :windows,
+  :server
+]
+
 describe Capybara::DSL do
   after do
     Capybara.session_name = nil
     Capybara.default_driver = nil
+    Capybara.javascript_driver = nil
     Capybara.use_default_driver
     Capybara.app = TestApp
   end
@@ -98,13 +111,21 @@ describe Capybara::DSL do
   end
 
   describe '#using_wait_time' do
+    before do
+      @previous_wait_time = Capybara.default_wait_time
+    end
+
+    after do
+      Capybara.default_wait_time = @previous_wait_time
+    end
+
     it "should switch the wait time and switch it back" do
       in_block = nil
       Capybara.using_wait_time 6 do
         in_block = Capybara.default_wait_time
       end
       in_block.should == 6
-      Capybara.default_wait_time.should == 0
+      Capybara.default_wait_time.should == @previous_wait_time
     end
 
     it "should ensure wait time is reset" do
@@ -113,11 +134,7 @@ describe Capybara::DSL do
           raise "hell"
         end
       end.to raise_error
-      Capybara.default_wait_time.should == 0
-    end
-
-    after do
-      Capybara.default_wait_time = 0
+      Capybara.default_wait_time.should == @previous_wait_time
     end
   end
 
@@ -211,45 +228,26 @@ describe Capybara::DSL do
       @session = Class.new { include Capybara::DSL }.new
     end
 
-    it_should_behave_like "session"
-    it_should_behave_like "session without javascript support"
-
     it "should be possible to include it in another class" do
-      klass = Class.new do
-        include Capybara::DSL
-      end
-      foo = klass.new
-      foo.visit('/with_html')
-      foo.click_link('ullamco')
-      foo.body.should include('Another World')
+      @session.visit('/with_html')
+      @session.click_link('ullamco')
+      @session.body.should include('Another World')
     end
 
     it "should provide a 'page' shortcut for more expressive tests" do
-      klass = Class.new do
-        include Capybara::DSL
-      end
-      foo = klass.new
-      foo.page.visit('/with_html')
-      foo.page.click_link('ullamco')
-      foo.page.body.should include('Another World')
+      @session.page.visit('/with_html')
+      @session.page.click_link('ullamco')
+      @session.page.body.should include('Another World')
     end
 
     it "should provide an 'using_session' shortcut" do
-      klass = Class.new do
-        include Capybara::DSL
-      end
       Capybara.should_receive(:using_session).with(:name)
-      foo = klass.new
-      foo.using_session(:name)
+      @session.using_session(:name)
     end
 
     it "should provide a 'using_wait_time' shortcut" do
-      klass = Class.new do
-        include Capybara::DSL
-      end
       Capybara.should_receive(:using_wait_time).with(6)
-      foo = klass.new
-      foo.using_wait_time(6)
+      @session.using_wait_time(6)
     end
   end
 end

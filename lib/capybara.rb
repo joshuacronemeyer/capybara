@@ -7,16 +7,15 @@ module Capybara
   class DriverNotFoundError < CapybaraError; end
   class FrozenInTime < CapybaraError; end
   class ElementNotFound < CapybaraError; end
+  class Ambiguous < ElementNotFound; end
   class ExpectationNotMet < ElementNotFound; end
   class FileNotFound < CapybaraError; end
   class UnselectNotAllowed < CapybaraError; end
   class NotSupportedByDriverError < CapybaraError; end
-  class TimeoutError < CapybaraError; end
-  class LocateHiddenElementError < CapybaraError; end
-  class InfiniteRedirectError < TimeoutError; end
+  class InfiniteRedirectError < CapybaraError; end
 
   class << self
-    attr_accessor :asset_root, :app_host, :run_server, :default_host
+    attr_accessor :asset_root, :app_host, :run_server, :default_host, :always_include_port
     attr_accessor :server_host, :server_port
     attr_accessor :default_selector, :default_wait_time, :ignore_hidden_elements
     attr_accessor :save_and_open_page_path, :automatic_reload
@@ -36,6 +35,7 @@ module Capybara
     #
     # [asset_root = String]               Where static assets are located, used by save_and_open_page
     # [app_host = String]                 The default host to use when giving a relative URL to visit
+    # [always_include_port = Boolean]     Whether the Rack server's port should automatically be inserted into every visited URL (Default: false)
     # [run_server = Boolean]              Whether to start a Rack server for the given Rack app (Default: true)
     # [default_selector = :css/:xpath]    Methods which take a selector use the given type by default (Default: CSS)
     # [default_wait_time = Integer]       The number of seconds to wait for asynchronous processes to finish (Default: 2)
@@ -88,19 +88,11 @@ module Capybara
     #     page.find('table#myTable').has_selector?(:row, 3)
     #     within(:row, 3) { page.should have_content('$100.000') }
     #
-    # It might be convenient to specify that the selector is automatically chosen for certain
-    # values. This way you don't have to explicitly specify that you are looking for a row, or
-    # an id. Let's say we want Capybara to treat any Symbols sent into methods like find to be
-    # treated as though they were element ids. We could achieve this like so:
+    # Here is another example:
     #
     #     Capybara.add_selector(:id) do
     #       xpath { |id| XPath.descendant[XPath.attr(:id) == id.to_s] }
-    #       match { |value| value.is_a?(Symbol) }
     #     end
-    #
-    # Now we can retrieve elements by id like this:
-    #
-    #     find(:post_123)
     #
     # Note that this particular selector already ships with Capybara.
     #
@@ -124,7 +116,7 @@ module Capybara
     #       Rack::Handler::Mongrel.run(app, :Port => port)
     #     end
     #
-    # By default, Capybara will try to run thin, falling back to webrick.
+    # By default, Capybara will try to run webrick.
     #
     # @yield [app, port]                      This block recieves a rack app and port and should run a Rack handler
     #
@@ -173,14 +165,8 @@ module Capybara
     # @param [Fixnum] port              The port to run the application on
     #
     def run_default_server(app, port)
-      begin
-        require 'rack/handler/thin'
-        Thin::Logging.silent = true
-        Rack::Handler::Thin.run(app, :Port => port)
-      rescue LoadError
-        require 'rack/handler/webrick'
-        Rack::Handler::WEBrick.run(app, :Port => port, :AccessLog => [], :Logger => WEBrick::Log::new(nil, 0))
-      end
+      require 'rack/handler/webrick'
+      Rack::Handler::WEBrick.run(app, :Port => port, :AccessLog => [], :Logger => WEBrick::Log::new(nil, 0))
     end
 
     ##
@@ -305,6 +291,8 @@ module Capybara
   autoload :Session,    'capybara/session'
   autoload :Selector,   'capybara/selector'
   autoload :Query,      'capybara/query'
+  autoload :Result,     'capybara/result'
+  autoload :Helpers,    'capybara/helpers'
   autoload :VERSION,    'capybara/version'
 
   module Node
@@ -348,6 +336,7 @@ module Capybara
 end
 
 Capybara.configure do |config|
+  config.always_include_port = false
   config.run_server = true
   config.server {|app, port| Capybara.run_default_server(app, port)}
   config.default_selector = :css

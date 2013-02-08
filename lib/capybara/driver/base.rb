@@ -11,11 +11,7 @@ class Capybara::Driver::Base
     raise NotImplementedError
   end
 
-  def source
-    raise NotImplementedError
-  end
-
-  def body
+  def html
     raise NotImplementedError
   end
 
@@ -27,6 +23,10 @@ class Capybara::Driver::Base
     raise Capybara::NotSupportedByDriverError
   end
 
+  def save_screenshot(path, options={})
+    raise Capybara::NotSupportedByDriverError
+  end
+
   def response_headers
     raise Capybara::NotSupportedByDriverError
   end
@@ -35,7 +35,7 @@ class Capybara::Driver::Base
     raise Capybara::NotSupportedByDriverError
   end
 
-  def within_frame(frame_id)
+  def within_frame(frame_handle)
     raise Capybara::NotSupportedByDriverError
   end
 
@@ -52,5 +52,9 @@ class Capybara::Driver::Base
   end
 
   def reset!
+  end
+
+  def needs_server?
+    false
   end
 end
